@@ -28,8 +28,7 @@ No downloads, no expensive hardware, no bloated software—just pure, customizab
 
 ## 🚀 Live Demo
 
-[👉 Click here to try the Live Interactive Demo!](#) 
-*(Note to self: Replace this `#` with the actual GitHub Pages link once activated!)*
+[👉 Click here to try the Live Interactive Demo!](https://rishank012.github.io/RGB-Keyboard-Simulator/) 
 
 ## 🛠️ Built With
 
