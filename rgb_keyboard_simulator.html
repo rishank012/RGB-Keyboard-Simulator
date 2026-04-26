@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RGB keyboard Simulator</title>
+    <style>
+        /* --- THEME --- */
+        :root {
+            --bg: #080808;
+            --panel: #151515;
+            --key-base: #202020;
+            --key-border: #333;
+            --text-off: #666;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            user-select: none; 
+        }
+
+        h1 { margin-bottom: 10px; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* --- CONTROLS UI --- */
+        .dashboard {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            max-width: 900px;
+        }
+
+        .group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 0 10px;
+            border-right: 1px solid #333;
+        }
+        .group:last-child { border-right: none; }
+
+        label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; }
+
+        select, input[type="range"] {
+            padding: 8px;
+            background: #252525;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .color-wrapper { display: flex; align-items: center; gap: 10px; }
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 40px; height: 30px;
+            cursor: pointer;
+            background: none;
+        }
+        
+        .ui-hidden { display: none !important; }
+
+        /* --- KEYBOARD --- */
+        .keyboard-frame {
+            background-color: #111;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            display: inline-flex;
+            gap: 10px;
+            border-bottom: 8px solid #000;
+            position: relative;
+        }
+
+        .section { display: flex; flex-direction: column; gap: 5px; }
+        .row { display: flex; gap: 5px; }
+
+        /* --- KEYS --- */
+        .k {
+            width: 50px; height: 50px;
+            background: var(--key-base);
+            border: 1px solid var(--key-border);
+            color: var(--text-off);
+            border-radius: 5px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 0.9rem; font-weight: 600;
+            cursor: crosshair; 
+            position: relative;
+            transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+        }
+
+        /* --- ACTIVE STATE --- */
+        .k.active {
+            background-color: #252525; 
+            color: var(--k-color);
+            border-color: var(--k-color);
+            box-shadow: inset 0 0 10px var(--k-glow-inner);
+            text-shadow: 0 0 10px var(--k-glow-outer);
+        }
+
+        /* --- ANIMATIONS --- */
+        .effect-breathing .k.active { animation: breathe 3s infinite ease-in-out; }
+        @keyframes breathe {
+            0%, 100% { opacity: 1; text-shadow: 0 0 15px var(--k-color); }
+            50% { opacity: 0.4; text-shadow: none; }
+        }
+
+        .effect-wave .k.active { animation: hue-cycle 3s linear infinite; }
+        @keyframes hue-cycle {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        .k.flash {
+            background: #fff !important; color: #000 !important;
+            box-shadow: 0 0 20px #fff !important; transition: none !important;
+        }
+        .k.fade-out { transition: all 0.8s ease-out !important; }
+
+        /* --- LAYOUT HELPERS --- */
+        .f-key { height: 35px; font-size: 0.75rem; margin-bottom: 10px; }
+        .w-tab { width: 80px; } .w-caps { width: 95px; } .w-enter { width: 112px; }
+        .w-shift-l { width: 125px; } .w-shift-r { width: 95px; } .w-ctrl { width: 60px; }
+        .w-space { width: 342px; } .h-tall { height: 105px; }
+
+    </style>
+</head>
+<body>
+
+    <h1>RGB KEYBOARD SIMULATOR</h1>
+    <h6> Made By Rishank Rastogi </h6>
+    
+    <div class="dashboard">
+        <div class="group">
+            <label>Zone Mode</label>
+            <select id="zoneMode" onchange="setZoneMode()">
+                <option value="perkey">🖌️ Per-Key (Paint)</option>
+                <option value="4zone">Sections (4-Zone)</option>
+                <option value="24zone">Spectrum (24-Zone)</option>
+                <option value="1zone">Global (1-Zone)</option>
+            </select>
+        </div>
+
+        <div class="group">
+            <label>Effect Overlay</label>
+            <select id="effectMode" onchange="setEffectMode()">
+                <option value="static">Static</option>
+                <option value="breathing">Breathing</option>
+                <option value="wave">RGB Wave</option>
+                <option value="reactive">Reactive (Type)</option>
+                <option value="repulse">Repulse (Ripple)</option>
+            </select>
+        </div>
+
+        <div class="group" id="ui-brush">
+            <label>Brush Color</label>
+            <div class="color-wrapper">
+                <input type="color" id="brushColor" value="#00e5ff">
+                <span style="font-size:0.8rem; color:#888;">Drag to paint</span>
+            </div>
+        </div>
+
+        <div class="group ui-hidden" id="ui-4zone">
+            <label>4-Zone Colors</label>
+            <div class="color-wrapper">
+                <input type="color" id="z1" value="#ff0000" oninput="update4Zone()">
+                <input type="color" id="z2" value="#00ff00" oninput="update4Zone()">
+                <input type="color" id="z3" value="#0000ff" oninput="update4Zone()">
+                <input type="color" id="z4" value="#ffff00" oninput="update4Zone()">
+            </div>
+        </div>
+
+        <div class="group ui-hidden" id="ui-24zone">
+            <label>24-Zone Shift</label>
+            <input type="range" min="0" max="360" value="0" id="spectrumShift" oninput="update24Zone()">
+        </div>
+    </div>
+
+    <div class="keyboard-frame" id="keyboard">
+        <div class="section">
+            <div class="row">
+                <div class="k f-key">Esc</div><div style="width:20px"></div>
+                <div class="k f-key">F1</div><div class="k f-key">F2</div><div class="k f-key">F3</div><div class="k f-key">F4</div><div style="width:20px"></div>
+                <div class="k f-key">F5</div><div class="k f-key">F6</div><div class="k f-key">F7</div><div class="k f-key">F8</div><div style="width:20px"></div>
+                <div class="k f-key">F9</div><div class="k f-key">F10</div><div class="k f-key">F11</div><div class="k f-key">F12</div>
+            </div>
+            <div class="row">
+                <div class="k">`</div><div class="k">1</div><div class="k">2</div><div class="k">3</div><div class="k">4</div>
+                <div class="k">5</div><div class="k">6</div><div class="k">7</div><div class="k">8</div>
+                <div class="k">9</div><div class="k">0</div><div class="k">-</div><div class="k">=</div><div class="k w-tab">⌫</div>
+            </div>
+            <div class="row">
+                <div class="k w-tab">Tab</div><div class="k">Q</div><div class="k">W</div><div class="k">E</div><div class="k">R</div>
+                <div class="k">T</div><div class="k">Y</div><div class="k">U</div><div class="k">I</div>
+                <div class="k">O</div><div class="k">P</div><div class="k">[</div><div class="k">]</div><div class="k" style="flex-grow:1">\</div>
+            </div>
+            <div class="row">
+                <div class="k w-caps">Caps</div><div class="k">A</div><div class="k">S</div><div class="k">D</div><div class="k">F</div>
+                <div class="k">G</div><div class="k">H</div><div class="k">J</div><div class="k">K</div>
+                <div class="k">L</div><div class="k">;</div><div class="k">'</div><div class="k w-enter">Enter</div>
+            </div>
+            <div class="row">
+                <div class="k w-shift-l">Shift</div><div class="k">Z</div><div class="k">X</div><div class="k">C</div><div class="k">V</div>
+                <div class="k">B</div><div class="k">N</div><div class="k">M</div><div class="k">,</div>
+                <div class="k">.</div><div class="k">/</div><div class="k w-shift-r">Shift</div><div class="k">↑</div>
+            </div>
+            <div class="row">
+                <div class="k w-ctrl">Ctrl</div>
+                <div class="k" style="width:50px">Fn</div>
+                <div class="k" style="width:50px">Win</div>
+                <div class="k" style="width:50px">Alt</div>
+                <div class="k w-space" data-code="Space"></div> <div class="k" style="width:50px">Alt</div>
+                <div class="k w-ctrl">Ctrl</div>
+                <div class="k">←</div>
+                <div class="k">↓</div>
+                <div class="k">→</div>
+            </div>
+        </div>
+
+        <div class="section" style="margin-top: 45px;">
+            <div class="row"><div class="k">Num</div><div class="k">/</div><div class="k">*</div><div class="k">-</div></div>
+            <div style="display:flex; gap:5px;">
+                <div style="display:flex; flex-direction: column; gap: 5px;">
+                     <div class="row"><div class="k">7</div><div class="k">8</div><div class="k">9</div></div>
+                     <div class="row"><div class="k">4</div><div class="k">5</div><div class="k">6</div></div>
+                </div>
+                <div class="k h-tall">+</div>
+            </div>
+            <div style="display:flex; gap:5px;">
+                <div style="display:flex; flex-direction: column; gap: 5px;">
+                     <div class="row"><div class="k">1</div><div class="k">2</div><div class="k">3</div></div>
+                     <div class="row"><div class="k" style="width: 105px;">0</div><div class="k">.</div></div>
+                </div>
+                <div class="k h-tall">Ent</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const keys = document.querySelectorAll('.k');
+        const keyboard = document.getElementById('keyboard');
+        let currentZoneMode = 'perkey';
+        let currentEffect = 'static';
+        let isDrawing = false;
+        let keyColorMap = new Map(); 
+
+        window.onload = () => {
+            keys.forEach((key, index) => {
+                key.dataset.id = index;
+                keyColorMap.set(index, '#00e5ff');
+                
+                key.addEventListener('mousedown', () => { isDrawing = true; handlePaint(key); });
+                key.addEventListener('mouseenter', () => { if (isDrawing) handlePaint(key); });
+
+                const rect = key.getBoundingClientRect();
+                const parentRect = keyboard.getBoundingClientRect();
+                key.dataset.relX = rect.left - parentRect.left;
+            });
+            document.addEventListener('mouseup', () => isDrawing = false);
+            setZoneMode();
+            renderKeys();
+        };
+
+        function setZoneMode() {
+            currentZoneMode = document.getElementById('zoneMode').value;
+            document.getElementById('ui-brush').classList.add('ui-hidden');
+            document.getElementById('ui-4zone').classList.add('ui-hidden');
+            document.getElementById('ui-24zone').classList.add('ui-hidden');
+
+            if (currentZoneMode === 'perkey' || currentZoneMode === '1zone') {
+                document.getElementById('ui-brush').classList.remove('ui-hidden');
+            } else if (currentZoneMode === '4zone') {
+                document.getElementById('ui-4zone').classList.remove('ui-hidden');
+                update4Zone();
+            } else if (currentZoneMode === '24zone') {
+                document.getElementById('ui-24zone').classList.remove('ui-hidden');
+                update24Zone();
+            }
+        }
+
+        function setEffectMode() {
+            currentEffect = document.getElementById('effectMode').value;
+            keyboard.className = 'keyboard-frame effect-' + currentEffect;
+        }
+
+        function handlePaint(key) {
+            if (currentZoneMode === '4zone' || currentZoneMode === '24zone') return;
+            const brushColor = document.getElementById('brushColor').value;
+            const id = parseInt(key.dataset.id);
+
+            if (currentZoneMode === 'perkey') {
+                keyColorMap.set(id, brushColor);
+                applyColorToKey(key, brushColor);
+            } else if (currentZoneMode === '1zone') {
+                keys.forEach((k, idx) => {
+                    keyColorMap.set(idx, brushColor);
+                    applyColorToKey(k, brushColor);
+                });
+            }
+        }
+
+        function update4Zone() {
+            if (currentZoneMode !== '4zone') return;
+            const c1 = document.getElementById('z1').value;
+            const c2 = document.getElementById('z2').value;
+            const c3 = document.getElementById('z3').value;
+            const c4 = document.getElementById('z4').value;
+            const zoneWidth = 850 / 4; 
+
+            keys.forEach(k => {
+                const x = parseFloat(k.dataset.relX);
+                let color = c1;
+                if (x > zoneWidth * 1) color = c2;
+                if (x > zoneWidth * 2) color = c3;
+                if (x > zoneWidth * 3) color = c4;
+                applyColorToKey(k, color);
+            });
+        }
+
+        function update24Zone() {
+            if (currentZoneMode !== '24zone') return;
+            const shift = parseInt(document.getElementById('spectrumShift').value);
+            const totalWidth = 950; 
+            const zones = 24;
+
+            keys.forEach(k => {
+                const x = parseFloat(k.dataset.relX);
+                const zoneIndex = Math.floor((x / totalWidth) * zones);
+                const hue = (zoneIndex * (360 / zones) + shift) % 360;
+                applyColorToKey(k, `hsl(${hue}, 100%, 50%)`);
+            });
+        }
+
+        function applyColorToKey(key, color) {
+            if (currentEffect === 'reactive' || currentEffect === 'repulse') {
+                key.classList.remove('active');
+                key.style.removeProperty('--k-color');
+            } else {
+                key.classList.add('active');
+                key.style.setProperty('--k-color', color);
+                key.style.setProperty('--k-glow-inner', color);
+                key.style.setProperty('--k-glow-outer', color);
+            }
+        }
+
+        function renderKeys() {
+            if (currentZoneMode === 'perkey' || currentZoneMode === '1zone') {
+                keys.forEach((k, idx) => applyColorToKey(k, keyColorMap.get(idx)));
+            }
+        }
+
+        // --- FIXED KEY MAPPING LOGIC ---
+        document.addEventListener('keydown', (e) => {
+            const keyName = e.key.toUpperCase();
+            const keyCode = e.code; // e.g., "Space", "ControlLeft"
+
+            keys.forEach(k => {
+                const kText = k.innerText.toUpperCase();
+                let match = false;
+
+                // 1. Direct Text Match (A, B, 1, 2)
+                if (kText === keyName) match = true;
+
+                // 2. Special Key Mappings (The Fix)
+                if (keyName === 'CONTROL' && kText === 'CTRL') match = true;
+                if (keyName === 'ESCAPE' && kText === 'ESC') match = true;
+                if (keyName === 'ARROWUP' && kText === '↑') match = true;
+                if (keyName === 'ARROWDOWN' && kText === '↓') match = true;
+                if (keyName === 'ARROWLEFT' && kText === '←') match = true;
+                if (keyName === 'ARROWRIGHT' && kText === '→') match = true;
+                
+                // 3. Spacebar (Uses code because text is empty)
+                if (keyCode === 'Space' && k.dataset.code === 'Space') match = true;
+                
+                // 4. Backspace/Enter symbols
+                if (keyCode === 'Backspace' && kText === '⌫') match = true;
+                if (keyCode === 'Enter' && (kText === 'ENTER' || kText === 'ENT')) match = true;
+
+                if (match) {
+                    triggerEffect(k);
+                    // Prevent default scrolling for arrows/space
+                    if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(keyCode)) {
+                        e.preventDefault(); 
+                    }
+                }
+            });
+        });
+
+        function triggerEffect(originKey) {
+            if (currentEffect === 'reactive') {
+                flashKey(originKey);
+            } 
+            else if (currentEffect === 'repulse') {
+                const oX = parseFloat(originKey.dataset.relX);
+                const oY = originKey.getBoundingClientRect().top;
+                keys.forEach(target => {
+                    const tX = parseFloat(target.dataset.relX);
+                    const tY = target.getBoundingClientRect().top;
+                    const dist = Math.hypot(tX - oX, tY - oY);
+                    setTimeout(() => flashKey(target), dist * 1.5);
+                });
+            }
+            else {
+                originKey.style.transform = "translateY(2px)";
+                setTimeout(() => originKey.style.transform = "none", 100);
+            }
+        }
+
+        function flashKey(k) {
+            k.classList.remove('fade-out');
+            k.classList.add('flash');
+            void k.offsetWidth; 
+            setTimeout(() => {
+                k.classList.remove('flash');
+                k.classList.add('fade-out');
+            }, 50);
+        }
+    </script>
+</body>
+</html>
